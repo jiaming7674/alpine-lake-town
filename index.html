@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>湖畔小鎮鐵道</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Noto+Sans+TC:wght@400;500&family=Noto+Serif+TC:wght@600&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #120e12;
+    --ink: #f3e9dc;
+    --muted: #c2b2a2;
+    --faint: rgba(243, 233, 220, 0.58);
+    --accent: #f0a24a;
+    --panel: rgba(22, 16, 20, 0.66);
+    --line: rgba(255, 214, 170, 0.16);
+    --press: rgba(240, 162, 74, 0.2);
+    --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+    --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+  .hud {
+    position: fixed;
+    left: calc(16px + env(safe-area-inset-left, 0px));
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    max-width: calc(100vw - 32px);
+    pointer-events: none;
+    padding: 10px 14px 12px;
+    background: var(--panel);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .eyebrow { margin: 0 0 4px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+  .hud h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 4.5vw, 34px); letter-spacing: 0.12em; line-height: 1.15; text-wrap: balance; }
+  .readout { margin: 8px 0 0; font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .readout b { font-weight: 400; color: var(--accent); }
+
+  .panel {
+    position: fixed;
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    width: min(300px, calc(100vw - 32px));
+    max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  #panel-toggle {
+    all: unset; box-sizing: border-box; width: 100%; flex: none;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; cursor: pointer; font-weight: 500; letter-spacing: 0.06em; color: var(--ink);
+  }
+  #panel-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
+  #panel-toggle .chev { font-family: var(--mono); color: var(--faint); transition: transform 0.2s; }
+  #panel-toggle[aria-expanded="false"] .chev { transform: rotate(180deg); }
+  #panel-body { display: grid; gap: 14px; padding: 0 14px 14px; overflow-y: auto; }
+  .grp { display: grid; gap: 10px; }
+  .grp h2 { margin: 0; font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.16em; color: var(--faint); }
+  .ctl { display: grid; gap: 4px; }
+  .ctl .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); }
+  .ctl output, .status b { font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--accent); font-variant-numeric: tabular-nums; }
+  input[type="range"] { width: 100%; margin: 0; accent-color: var(--accent); }
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; }
+  .seg button { font: inherit; font-size: 12px; color: var(--muted); background: transparent; border: 0; border-radius: 6px; padding: 7px 0; cursor: pointer; }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--press); color: var(--ink); }
+  .row-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font: inherit; font-size: 12px; color: var(--ink); background: transparent;
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn[aria-pressed="true"] { background: var(--press); border-color: var(--accent); }
+  .status { margin: 0; color: var(--muted); font-size: 12px; }
+  .check { display: flex; gap: 8px; align-items: center; color: var(--muted); cursor: pointer; }
+  .check input { accent-color: var(--accent); margin: 0; }
+  .seg button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .hint {
+    position: fixed; margin: 0;
+    left: calc(16px + env(safe-area-inset-left, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    font-size: 12px; color: var(--faint); pointer-events: none;
+  }
+  @media (max-width: 640px) { .hint { display: none; } }
+
+  #loader {
+    position: fixed; inset: 0; display: grid; place-items: center; padding-inline: 16px; text-align: center;
+    background: var(--bg); color: var(--muted);
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em;
+    transition: opacity 0.9s ease;
+  }
+  #loader.done { opacity: 0; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { #loader { transition: none; } }
+</style>
+
+</head>
+<body>
+<div id="stage"></div>
+<div id="fade" aria-hidden="true"></div>
+
+<header class="hud">
+  <p class="eyebrow">Alpine Lake Town · Railway v1</p>
+  <h1>湖畔小鎮</h1>
+  <p class="readout"><b id="r-phase">日落</b> · 太陽 <b id="r-sun">4.0°</b><span id="r-train-wrap" hidden> · 火車 <b id="r-train">—</b></span> · <b id="r-fps">--</b> fps</p>
+</header>
+
+<aside class="panel" aria-label="場景參數">
+  <button id="panel-toggle" type="button" aria-expanded="true" aria-controls="panel-body">
+    <span>場景參數</span><span class="chev" aria-hidden="true">▾</span>
+  </button>
+  <div id="panel-body">
+    <section class="grp" aria-label="時段">
+      <h2>時段</h2>
+      <div class="seg" id="seg-time" role="group" aria-label="時段">
+        <button type="button" data-v="4" aria-pressed="true">日落</button>
+        <button type="button" data-v="-4.5" aria-pressed="false">藍調時刻</button>
+        <button type="button" data-v="-15" aria-pressed="false">夜晚</button>
+      </div>
+      <div class="ctl">
+        <label class="row" for="sun"><span>太陽高度</span><output id="o-sun" for="sun">4.0°</output></label>
+        <input type="range" id="sun" min="-18" max="15" step="0.1" value="4">
+      </div>
+    </section>
+
+    <section class="grp" aria-label="鏡頭">
+      <h2>鏡頭</h2>
+      <div class="seg" id="seg-cam" role="group" aria-label="鏡頭模式" hidden>
+        <button type="button" data-v="free" aria-pressed="true">自由</button>
+        <button type="button" data-v="chase" aria-pressed="false">跟車</button>
+        <button type="button" data-v="cab" aria-pressed="false">駕駛室</button>
+        <button type="button" data-v="tour" aria-pressed="false">導覽</button>
+      </div>
+      <div class="row-btns" id="view-btns">
+        <button class="btn" type="button" data-view="hero">全景視角</button>
+        <button class="btn" type="button" data-view="cabin">木屋視角</button>
+      </div>
+    </section>
+
+    <section class="grp" id="grp-train" aria-label="火車" hidden>
+      <h2>火車</h2>
+      <p class="status">狀態 <b id="o-train">—</b> · 車速 <b id="o-kmh">0</b> km/h</p>
+      <div class="ctl">
+        <label class="row" for="tspeed"><span>車速倍率</span><output id="o-tspeed" for="tspeed">×1.00</output></label>
+        <input type="range" id="tspeed" min="0" max="2" step="0.05" value="1">
+      </div>
+      <div class="row-btns">
+        <button class="btn" type="button" id="whistle">鳴笛</button>
+        <button class="btn" type="button" id="sound" aria-pressed="false">音效：關</button>
+      </div>
+    </section>
+
+    <section class="grp" aria-label="環境">
+      <h2>環境</h2>
+      <div class="ctl">
+        <label class="row" for="wind"><span>風速</span><output id="o-wind" for="wind">1.0 m/s</output></label>
+        <input type="range" id="wind" min="0" max="4" step="0.1" value="1">
+      </div>
+      <div class="ctl">
+        <label class="row" for="fire"><span>營火強度</span><output id="o-fire" for="fire">×1.00</output></label>
+        <input type="range" id="fire" min="0" max="2" step="0.05" value="1">
+      </div>
+      <div class="ctl">
+        <label class="row" for="bloom"><span>光暈 Bloom</span><output id="o-bloom" for="bloom">0.55</output></label>
+        <input type="range" id="bloom" min="0" max="1.5" step="0.05" value="0.55">
+      </div>
+      <div class="ctl">
+        <label class="row" for="rays"><span>光束 God rays</span><output id="o-rays" for="rays">0.30</output></label>
+        <input type="range" id="rays" min="0" max="1" step="0.05" value="0.3">
+      </div>
+      <label class="check" for="dof"><input type="checkbox" id="dof"> 淺景深</label>
+    </section>
+  </div>
+</aside>
+
+<p class="hint" id="hint">拖曳旋轉 · 滾輪／雙指縮放 · 右鍵平移</p>
+<div id="loader" role="status">載入場景中…</div>
+
+<script>
+  window.__sceneStarted = false;
+  setTimeout(function () {
+    if (!window.__sceneStarted) {
+      var l = document.getElementById('loader');
+      if (l && !l.classList.contains('done')) l.textContent = '場景無法載入：請確認瀏覽器支援 WebGL 2，並重新整理頁面。';
+    }
+  }, 30000);
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
