@@ -1,10 +1,12 @@
 // Low-poly terrain mesh (one color per face) and the reflective lake.
-import { THREE, Q, R, rand, fbm, lakeD } from './core.js';
+import { THREE, Q, R, rand, mulberry32, fbm, lakeD, WORLD_SIZE } from './core.js';
 import { Water } from 'three/addons/objects/Water.js';
 import { heightAt } from './world.js';
 
 export function createTerrain(scene) {
-  let g = new THREE.PlaneGeometry(900, 900, Q.seg, Q.seg);
+  // Q.seg was tuned for a 900 m plane; scale it so the cell size (about 3 m) stays the same.
+  const seg = Math.round(Q.seg * WORLD_SIZE / 900);
+  let g = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, seg, seg);
   g.rotateX(-Math.PI / 2);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) p.setY(i, heightAt(p.getX(i), p.getZ(i)));
@@ -18,6 +20,9 @@ export function createTerrain(scene) {
     grassA: new THREE.Color(0x4a6a2b), grassB: new THREE.Color(0x7d8a3a),
     rockA: new THREE.Color(0x5f5954), rockB: new THREE.Color(0x857b72), snow: new THREE.Color(0xe6e3ec),
   };
+  // The first 2 * Q.seg² faces (what the old 900 m plane had) keep drawing from the shared random
+  // stream; extra faces use their own. That way the town and trees generated afterwards stay exactly as before.
+  const legacyFaces = 2 * Q.seg * Q.seg, extraRand = mulberry32(31337);
   for (let f = 0; f < pos.count; f += 3) {
     const cx = (pos.getX(f) + pos.getX(f + 1) + pos.getX(f + 2)) / 3;
     const cy = (pos.getY(f) + pos.getY(f + 1) + pos.getY(f + 2)) / 3;
@@ -29,7 +34,7 @@ export function createTerrain(scene) {
     else if (cy > 85 && ny > 0.55) c.copy(K.snow);
     else if (ny < 0.78 || cy > 40) c.copy(K.rockA).lerp(K.rockB, n);
     else c.copy(K.grassA).lerp(K.grassB, n * 0.9);
-    c.offsetHSL(0, 0, (rand() - 0.5) * 0.035);
+    c.offsetHSL(0, 0, ((f / 3 < legacyFaces ? rand() : extraRand()) - 0.5) * 0.035);
     for (let k = 0; k < 3; k++) c.toArray(col, (f + k) * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -62,7 +67,7 @@ function makeWaterNormals() {
 }
 
 export function createWater(scene) {
-  const water = new Water(new THREE.PlaneGeometry(900, 900), {
+  const water = new Water(new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE), {
     textureWidth: Q.water, textureHeight: Q.water, waterNormals: makeWaterNormals(),
     sunDirection: new THREE.Vector3(0, 1, 0), sunColor: 0xffb070, waterColor: 0x0d2a33,
     distortionScale: 1.8, fog: true,

@@ -37,6 +37,10 @@ export const WIND_DIR = new THREE.Vector3(1, 0, 0.25).normalize();
 // ───────────── world layout (1 unit = 1 m, Y up) ─────────────
 export const SUN_AZ = 150;
 export const LAKE = { x: 0, z: -64, rx: 78, rz: 50 };
+// Mountains grow from distance r0 to full height at r1 (measured from the lake centre).
+export const MOUNTAIN = { r0: 190, r1: 320 };
+// Side length of the terrain and water planes. Keep it well beyond MOUNTAIN.r1 so the edge hides in fog.
+export const WORLD_SIZE = 1100;
 export const lakeD = (x, z) => { const dx = (x - LAKE.x) / LAKE.rx, dz = (z - LAKE.z) / LAKE.rz; return dx * dx + dz * dz; };
 const NOTCH = { x: -6.5, z: 19.5 };
 export const notchAngle = (x, z) => Math.atan2(x - NOTCH.x, -(z - NOTCH.z));

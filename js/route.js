@@ -1,14 +1,21 @@
 // Railway alignment, streets, creek and the distance grids the terrain uses to grade around them.
 import { THREE, clamp, lerp, LAKE } from './core.js';
 
-// Track centerline (x, z). It starts 95 m inside the west hill, runs along the far (north) shore,
-// crosses the creek on a trestle, turns south down the east shore through the station and
-// disappears into the east hill. Index 4 is portal A, index 16 is portal B.
+// Track centerline (x, z). It starts inside the west hill, runs along the far (north) shore,
+// crosses the creek on a trestle, turns south down the east shore through the station, then
+// bends south-west around the town and disappears into the south-east hill.
+// PORTAL_A and PORTAL_B are the control points where the track leaves the hills; everything
+// before PORTAL_A and after PORTAL_B is hidden inside a hill and only shapes the curve.
+const PORTAL_A = [-150, -139];
+const PORTAL_B = [134, 67];
 const CTRL = [
-  [-150, -139], [-125, -136], [-100, -132], [-78, -129], [-55, -126],
+  [-226, -164], [-200, -154], [-175, -146], PORTAL_A,
+  [-125, -136], [-100, -132], [-78, -129], [-55, -126],
   [-30, -124], [0, -123], [30, -119], [52, -110], [70, -95], [86, -78], [96, -58],
   [99, -38], [100, -22], [104, -9], [112, 0], [124, 7],
-  [148, 13], [172, 17], [196, 20],
+  // 40 m radius right-hand bend from the station throat around to the south-west (centre ~ (104, 42))
+  [137, 19], [143, 35], [142, 52], PORTAL_B,
+  [121, 78], [104, 82], [87, 78], [73, 67], [65, 52],   // hidden inside the south-east hill (long enough to hold a whole train)
 ];
 const curve = new THREE.CatmullRomCurve3(CTRL.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
 curve.arcLengthDivisions = 8000;
@@ -53,8 +60,8 @@ export function lakeSign(s) {
 
 // ───────────── named places along the line ─────────────
 export const S = {};
-S.A = sNear(-55, -126);            // west portal
-S.B = sNear(124, 7);               // east portal
+S.A = sNear(...PORTAL_A);          // west portal
+S.B = sNear(...PORTAL_B);          // south-east portal
 S.stop = sNear(101.6, -16);        // where the locomotive's front stops
 S.cross = S.stop + 6;              // level crossing just ahead of the stop
 S.platform = [S.stop - 62, S.stop - 16];

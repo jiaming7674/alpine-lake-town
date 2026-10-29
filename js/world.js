@@ -1,5 +1,5 @@
 // Terrain height field: natural hills, lake, mountains, creek, town flattening, and the graded rail corridor.
-import { lerp, clamp, smooth, fbm, lakeD, LAKE, notchAngle, PASS_ANG } from './core.js';
+import { lerp, clamp, smooth, fbm, lakeD, LAKE, MOUNTAIN, notchAngle, PASS_ANG } from './core.js';
 import { PX, PY, PZ, N, DS, LEN, S, HILLS, creekDist, trackGrid, streetGrid } from './route.js';
 
 export const townLevel = x => lerp(0.3, 1.2, smooth(25, 60, x));
@@ -10,7 +10,7 @@ function natural(x, z) {
   return lerp(0.25, Math.max(hills, 0.2), flat);
 }
 function mountains(x, z) {
-  const m = smooth(135, 260, Math.hypot(x - LAKE.x, z - LAKE.z));
+  const m = smooth(MOUNTAIN.r0, MOUNTAIN.r1, Math.hypot(x - LAKE.x, z - LAKE.z));
   if (m <= 0) return 0;
   const ridge = 1 - Math.abs(fbm(x * 0.008 + 4, z * 0.008 - 7, 5) * 2 - 1);
   const pass = 0.12 + 0.88 * smooth(0.1, 0.42, Math.abs(notchAngle(x, z) - PASS_ANG));   // sunset notch

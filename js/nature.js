@@ -84,7 +84,7 @@ export function createTrees(scene, lots = []) {
     }
   };
   scatter(Q.nearTrees, [-60, 60], [-40, 50], [0.9, 1.6]);
-  scatter(Q.farTrees, [-190, 200], [-210, 60], [1.2, 2.2]);
+  scatter(Math.round(Q.farTrees * 1.5), [-250, 235], [-230, 135], [1.2, 2.2]);   // wider range: the track and mountains moved out
   const build = (geo, list) => {
     const mesh = new THREE.InstancedMesh(geo, addSway(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 })), list.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color();
