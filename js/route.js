@@ -71,11 +71,31 @@ S.signal = S.stop + 15;
 S.start = sNear(-20, -124);        // where the train is on page load
 
 // ───────────── creek (crossed by the trestle) ─────────────
-export const CREEK = { ax: 40, az: -86, bx: 86, bz: -140 };
+// The creek enters the lake at its north-east shore (first leg, unchanged) and comes down from the
+// mountains in the top-right corner of the map. The far part is a smooth curve that ends at the
+// edge of the terrain; world.js opens a valley through the mountains along it.
+const CREEK_LAKE_END = [40, -86];
+const CREEK_UPSTREAM = [
+  [86, -140], [124, -171], [168, -196], [214, -218], [262, -246], [310, -286],
+  [352, -334], [386, -388], [414, -448], [436, -506], [452, -552],
+];
+export const CREEK_PTS = [CREEK_LAKE_END, ...new THREE.CatmullRomCurve3(CREEK_UPSTREAM.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal')
+  .getSpacedPoints(48).map(p => [p.x, p.z])];
+const CREEK_SEG = [];
+for (let i = 0; i + 1 < CREEK_PTS.length; i++) {
+  const [ax, az] = CREEK_PTS[i], [bx, bz] = CREEK_PTS[i + 1], vx = bx - ax, vz = bz - az;
+  CREEK_SEG.push({ ax, az, vx, vz, l2: vx * vx + vz * vz });
+}
+const CREEK_FAR = 100;   // distances beyond this are not needed by anybody; skip the work
+const CREEK_BOX = CREEK_PTS.reduce((b, [x, z]) => ({ x0: Math.min(b.x0, x), x1: Math.max(b.x1, x), z0: Math.min(b.z0, z), z1: Math.max(b.z1, z) }), { x0: 1e9, x1: -1e9, z0: 1e9, z1: -1e9 });
 export function creekDist(x, z) {
-  const { ax, az, bx, bz } = CREEK, vx = bx - ax, vz = bz - az;
-  const t = clamp(((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz), 0, 1);
-  return Math.hypot(x - (ax + vx * t), z - (az + vz * t));
+  if (x < CREEK_BOX.x0 - CREEK_FAR || x > CREEK_BOX.x1 + CREEK_FAR || z < CREEK_BOX.z0 - CREEK_FAR || z > CREEK_BOX.z1 + CREEK_FAR) return 1e4;
+  let best = Infinity;
+  for (const g of CREEK_SEG) {
+    const t = clamp(((x - g.ax) * g.vx + (z - g.az) * g.vz) / g.l2, 0, 1), dx = x - (g.ax + g.vx * t), dz = z - (g.az + g.vz * t), d = dx * dx + dz * dz;
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
 }
 {
   let b0 = Infinity, b1 = -Infinity;

@@ -14,7 +14,9 @@ function mountains(x, z) {
   if (m <= 0) return 0;
   const ridge = 1 - Math.abs(fbm(x * 0.008 + 4, z * 0.008 - 7, 5) * 2 - 1);
   const pass = 0.12 + 0.88 * smooth(0.1, 0.42, Math.abs(notchAngle(x, z) - PASS_ANG));   // sunset notch
-  return m * pass * (ridge * ridge * 135 + fbm(x * 0.02, z * 0.02, 3) * 25);
+  // the creek runs through a valley: the mountains stay low next to it and rise gradually to full height 85 m away
+  const valley = 0.04 + 0.96 * smooth(12, 85, creekDist(x, z));
+  return m * pass * valley * (ridge * ridge * 135 + fbm(x * 0.02, z * 0.02, 3) * 25);
 }
 function bumps(x, z) {
   let h = 0;

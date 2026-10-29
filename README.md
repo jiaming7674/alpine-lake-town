@@ -76,6 +76,7 @@ audio.js ← train
 |---|---|---|
 | 軌道路線與長度 | `js/route.js` 的 `CTRL`、`PORTAL_A`、`PORTAL_B` | 軌道由控制點的平滑曲線組成；隧道口以內的點只用來決定曲線，會被山丘遮住。隧道口之後至少要留一段火車長度的隱藏軌道 |
 | 山脈離湖心的距離 | `js/core.js` 的 `MOUNTAIN.r0`、`MOUNTAIN.r1` | 山從 `r0` 開始隆起，到 `r1` 達到全高。可見軌道最遠處離湖心要小於 `r0`，否則鐵路會爬進山腳 |
+| 溪流路徑 | `js/route.js` 的 `CREEK_UPSTREAM` | 從湖的東北岸一路延伸到地形右上角邊緣；`js/world.js` 的 `valley` 讓山脈沿溪流變低，溪流才能穿過山區 |
 | 地形與水面邊長 | `js/core.js` 的 `WORLD_SIZE` | 要比 `MOUNTAIN.r1` 的兩倍大，邊緣才會被霧遮住 |
 
 目前的配置請看 [`docs/map.svg`](docs/map.svg)（座標由程式實際算出，橘色虛線是調整前的位置）。
